@@ -3,5 +3,5 @@ google-api-python-client
 detoxify
 pandas
 matplotlib
-torch==2.2.0
-torchvision==0.17.0
+torch==2.0.0+cpu
+torchvision==0.15.1+cpu
