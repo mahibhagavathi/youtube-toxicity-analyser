@@ -5,7 +5,7 @@ A Streamlit-based AI web app that analyzes YouTube video comments and detects to
 ---
 
 ## 🚀 Live Demo
-*((https://youtube-toxicity-analyser.streamlit.app/))*  
+*https://youtube-toxicity-analyser.streamlit.app/*  
 
 ---
 
