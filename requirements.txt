@@ -1,0 +1,5 @@
+streamlit
+google-api-python-client
+detoxify
+pandas
+matplotlib
