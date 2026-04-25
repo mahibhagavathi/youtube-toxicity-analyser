@@ -1,7 +1,6 @@
 streamlit
-google-api-python-client
 pandas
 matplotlib
-transformers
-torch
-detoxify
+google-api-python-client
+google-generativeai
+wordcloud
