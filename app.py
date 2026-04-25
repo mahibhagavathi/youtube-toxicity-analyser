@@ -7,6 +7,15 @@ from googleapiclient.discovery import build
 import google.generativeai as genai
 from wordcloud import WordCloud
 
+def safe_json_parse(text):
+    cleaned = text.strip()
+    cleaned = cleaned.replace("```json", "").replace("```", "")
+
+    try:
+        return json.loads(cleaned)
+    except:
+        return None
+
 # ── CONFIG ─────────────────────────────────────────────
 st.set_page_config(
     page_title="YouTube Comment Intelligence Analyser",
