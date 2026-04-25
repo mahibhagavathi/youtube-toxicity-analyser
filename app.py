@@ -3,8 +3,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import re
 from googleapiclient.discovery import build
-from detoxify import Detoxify
-
+from transformers import pipeline
 # ── Page config ──────────────────────────────────────────────────────────────
 st.set_page_config(
     page_title="YouTube Comment Toxicity Analyser",
