@@ -81,7 +81,7 @@ if analyse_btn:
         st.stop()
 
     # Fetch comments
-    with st.spinner("Fetching up to 100 comments from YouTube..."):
+    with st.spinner("Fetching up to 500 comments from YouTube..."):
         try:
             comments = fetch_comments(api_key, video_id)
         except Exception as e:
