@@ -3,7 +3,8 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import re
 from googleapiclient.discovery import build
-from transformers import pipeline
+from detoxify import Detoxify
+
 # ── Page config ──────────────────────────────────────────────────────────────
 st.set_page_config(
     page_title="YouTube Comment Toxicity Analyser",
@@ -13,7 +14,7 @@ st.set_page_config(
 
 # ── Title ─────────────────────────────────────────────────────────────────────
 st.title("🔍 YouTube Comment Toxicity Analyser")
-st.markdown("Paste any YouTube video link to analyse its top 100 comments for toxic language.")
+st.markdown("Paste any YouTube video link to analyse its top 200 comments for toxic language. Created by Mahitha Bhagavathi.")
 st.divider()
 
 # ── Helper: extract video ID from URL ────────────────────────────────────────
@@ -30,7 +31,7 @@ def extract_video_id(url):
     return None
 
 # ── Helper: fetch comments ────────────────────────────────────────────────────
-def fetch_comments(api_key, video_id, max_comments=100):
+def fetch_comments(api_key, video_id, max_comments=200):
     youtube = build("youtube", "v3", developerKey=api_key)
     comments = []
     next_page_token = None
@@ -80,7 +81,7 @@ if analyse_btn:
         st.stop()
 
     # Fetch comments
-    with st.spinner("Fetching up to 500 comments from YouTube..."):
+    with st.spinner("Fetching up to 200 comments from YouTube..."):
         try:
             comments = fetch_comments(api_key, video_id)
         except Exception as e:
