@@ -16,6 +16,27 @@ def safe_json_parse(text):
     except:
         return None
 
+prompt = f"""
+You are a strict JSON generator.
+
+Classify each comment.
+
+Return ONLY valid JSON array. No explanation. No markdown.
+
+Schema:
+[
+  {{
+    "sentiment": "positive | neutral | negative | toxic",
+    "toxicity_type": "none | insult | hate | threat | profanity | spam",
+    "severity": "low | medium | high",
+    "reason": "short reason"
+  }}
+]
+
+Comments:
+{batch}
+"""
+
 # ── CONFIG ─────────────────────────────────────────────
 st.set_page_config(
     page_title="YouTube Comment Intelligence Analyser",
