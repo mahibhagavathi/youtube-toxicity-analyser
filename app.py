@@ -12,45 +12,6 @@ except Exception:
     st.error("Missing YOUTUBE_API_KEY in Streamlit secrets.")
     st.stop()
 
-import plotly.express as px
-import pandas as pd
-
-# Convert to DataFrame
-df = pd.DataFrame({
-    "Sentiment": sentiment_counts.keys(),
-    "Count": sentiment_counts.values()
-})
-
-# Sort in descending order
-df = df.sort_values(by="Count", ascending=False)
-
-# Color mapping
-color_map = {
-    "Toxic": "red",
-    "Borderline": "orange",
-    "Normal": "green"
-}
-
-fig = px.bar(
-    df,
-    x="Sentiment",
-    y="Count",
-    color="Sentiment",
-    color_discrete_map=color_map,
-    text="Count"
-)
-
-fig.update_traces(textposition="outside")
-
-fig.update_layout(
-    title="Sentiment Breakdown",
-    xaxis_title="",
-    yaxis_title="Number of Comments",
-    showlegend=False
-)
-
-st.plotly_chart(fig, use_container_width=True)
-
 TOXICITY_EXPLANATIONS = {
     "toxicity":            ("☠️ Toxicity",           "General harmful or rude content"),
     "severe_toxicity":     ("💀 Severe Toxicity",     "Extremely hateful or violent language"),
@@ -128,7 +89,7 @@ def badge(label):
 url = st.text_input("YouTube URL")
 col1, col2 = st.columns(2)
 order = col1.selectbox("Order", ["Top (Relevance)", "Newest"])
-max_comments = col2.slider("Max comments", 20, 100, 50, step=10)
+max_comments = col2.slider("Max comments", 20, 300, 100, step=10)
 order_val = "relevance" if "Relevance" in order else "time"
 
 if st.button("Analyse", type="primary"):
@@ -172,10 +133,24 @@ if st.button("Analyse", type="primary"):
     left, right = st.columns(2)
     with left:
         st.subheader("📊 Sentiment Breakdown")
-        chart_data = pd.DataFrame({
-            "Count": [len(toxic), len(borderline), len(normal)]
-        }, index=["Toxic 🔴", "Borderline 🟠", "Normal 🟢"])
-        st.bar_chart(chart_data)
+        import matplotlib.pyplot as plt
+        labels  = ["Toxic", "Borderline", "Normal"]
+        counts  = [len(toxic), len(borderline), len(normal)]
+        colors  = ["#e53935", "#fb8c00", "#43a047"]
+        # sort descending
+        paired  = sorted(zip(counts, labels, colors), reverse=True)
+        counts, labels, colors = zip(*paired)
+        fig, ax = plt.subplots(figsize=(5, 3))
+        bars = ax.bar(labels, counts, color=colors, edgecolor="none", width=0.5)
+        ax.bar_label(bars, padding=3, fontsize=11, fontweight="bold")
+        ax.set_ylabel("Comments")
+        ax.spines[["top","right"]].set_visible(False)
+        ax.set_facecolor("#0e1117")
+        fig.patch.set_facecolor("#0e1117")
+        ax.tick_params(colors="white")
+        ax.yaxis.label.set_color("white")
+        st.pyplot(fig)
+        plt.close(fig)
 
     # ── TOXICITY TYPE BREAKDOWN ──
     with right:
