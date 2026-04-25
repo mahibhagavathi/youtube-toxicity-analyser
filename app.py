@@ -34,11 +34,17 @@ def fetch_video_info(api_key, video_id):
         return None
     snippet = items[0]["snippet"]
     return {
-        "title":     snippet.get("title", "Unknown"),
-        "channel":   snippet.get("channelTitle", "Unknown"),
-        "thumbnail": snippet.get("thumbnails", {}).get("high", {}).get("url", ""),
-        "published": snippet.get("publishedAt", "")[:10],
-    }
+    "title": snippet.get("title", "Unknown"),
+    "channel": {
+        "label": "Channel Name",
+        "value": snippet.get("channelTitle", "Unknown")
+    },
+    "upload_date": {
+        "label": "Upload Date",
+        "value": snippet.get("publishedAt", "")[:10]
+    },
+    "thumbnail": snippet.get("thumbnails", {}).get("high", {}).get("url", ""),
+}
 
 @st.cache_data(show_spinner=False)
 def fetch_comments(api_key, video_id, order, max_comments):
