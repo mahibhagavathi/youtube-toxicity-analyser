@@ -66,13 +66,18 @@ def load_model():
 def analyse_comments(comments_tuple):
     model = load_model()
     comments = list(comments_tuple)
-    scores = model.predict(comments)
-    df = pd.DataFrame(scores)
+    all_scores = {}
+    batch_size = 64
+    for i in range(0, len(comments), batch_size):
+        batch = comments[i:i+batch_size]
+        batch_scores = model.predict(batch)
+        for k, v in batch_scores.items():
+            all_scores.setdefault(k, []).extend(v.tolist() if hasattr(v, "tolist") else list(v))
+    df = pd.DataFrame(all_scores)
     df.insert(0, "comment", comments)
-    # label each comment
     def label(row):
-        if row["toxicity"] >= 0.7:   return "toxic"
-        if row["toxicity"] >= 0.4:   return "borderline"
+        if row["toxicity"] >= 0.7: return "toxic"
+        if row["toxicity"] >= 0.4: return "borderline"
         return "normal"
     df["label"] = df.apply(label, axis=1)
     return df
