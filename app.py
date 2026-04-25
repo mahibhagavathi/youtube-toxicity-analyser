@@ -14,7 +14,7 @@ st.set_page_config(
 
 # ── Title ─────────────────────────────────────────────────────────────────────
 st.title("🔍 YouTube Comment Toxicity Analyser")
-st.markdown("Paste any YouTube video link to analyse its top 100 comments for toxic language.")
+st.markdown("Paste any YouTube video link to analyse its top 500 comments for toxic language.")
 st.divider()
 
 # ── Helper: extract video ID from URL ────────────────────────────────────────
@@ -31,20 +31,31 @@ def extract_video_id(url):
     return None
 
 # ── Helper: fetch comments ────────────────────────────────────────────────────
-def fetch_comments(api_key, video_id):
+def fetch_comments(api_key, video_id, max_comments=500):
     youtube = build("youtube", "v3", developerKey=api_key)
-    request = youtube.commentThreads().list(
-        part="snippet",
-        videoId=video_id,
-        maxResults=100,
-        order="relevance"
-    )
-    response = request.execute()
     comments = []
-    for item in response.get("items", []):
-        text = item["snippet"]["topLevelComment"]["snippet"]["textDisplay"]
-        comments.append(text)
-    return comments
+    next_page_token = None
+
+    while len(comments) < max_comments:
+        request = youtube.commentThreads().list(
+            part="snippet",
+            videoId=video_id,
+            maxResults=100,
+            order="relevance",
+            pageToken=next_page_token
+        )
+        response = request.execute()
+
+        for item in response.get("items", []):
+            text = item["snippet"]["topLevelComment"]["snippet"]["textDisplay"]
+            comments.append(text)
+
+        next_page_token = response.get("nextPageToken")
+
+        if not next_page_token:
+            break
+
+    return comments[:max_comments]
 
 # ── API key from Streamlit secrets ────────────────────────────────────────────
 try:
@@ -70,7 +81,7 @@ if analyse_btn:
         st.stop()
 
     # Fetch comments
-    with st.spinner("Fetching comments from YouTube..."):
+    with st.spinner("Fetching up to 500 comments from YouTube..."):
         try:
             comments = fetch_comments(api_key, video_id)
         except Exception as e:
