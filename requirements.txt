@@ -1,7 +1,5 @@
 streamlit
 google-api-python-client
+detoxify
 pandas
 matplotlib
-detoxify
-torch==1.13.1
-torchvision==0.14.1
