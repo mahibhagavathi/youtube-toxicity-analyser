@@ -2,36 +2,47 @@ import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
 import re
+import json
 from googleapiclient.discovery import build
-from detoxify import Detoxify
+import google.generativeai as genai
+from wordcloud import WordCloud
 
-# ── Page config ──────────────────────────────────────────────────────────────
+# ── CONFIG ─────────────────────────────────────────────
 st.set_page_config(
-    page_title="YouTube Comment Toxicity Analyser",
-    page_icon="🔍",
+    page_title="YouTube Comment Intelligence Analyser",
+    page_icon="🧠",
     layout="centered"
 )
 
-# ── Title ─────────────────────────────────────────────────────────────────────
-st.title("🔍 YouTube Comment Toxicity Analyser")
-st.markdown("Paste any YouTube video link to analyse its top 200 comments for toxic language. Created by Mahitha Bhagavathi.")
+st.title("🧠 YouTube Comment Intelligence Analyser")
+st.markdown("Analyse YouTube comments using AI for sentiment, toxicity, and themes.")
 st.divider()
 
-# ── Helper: extract video ID from URL ────────────────────────────────────────
+# ── LOAD KEYS ──────────────────────────────────────────
+try:
+    YOUTUBE_API_KEY = st.secrets["YOUTUBE_API_KEY"]
+    GEMINI_API_KEY = st.secrets["GEMINI_API_KEY"]
+except:
+    st.error("Missing API keys in Streamlit secrets.")
+    st.stop()
+
+genai.configure(api_key=GEMINI_API_KEY)
+model = genai.GenerativeModel("gemini-1.5-flash")
+
+# ── HELPERS ────────────────────────────────────────────
 def extract_video_id(url):
     patterns = [
         r"(?:v=)([A-Za-z0-9_-]{11})",
-        r"(?:youtu\.be/)([A-Za-z0-9_-]{11})",
-        r"(?:embed/)([A-Za-z0-9_-]{11})"
+        r"(?:youtu\.be/)([A-Za-z0-9_-]{11})"
     ]
-    for pattern in patterns:
-        match = re.search(pattern, url)
+    for p in patterns:
+        match = re.search(p, url)
         if match:
             return match.group(1)
     return None
 
-# ── Helper: fetch comments ────────────────────────────────────────────────────
-def fetch_comments(api_key, video_id, max_comments=200):
+
+def fetch_comments(api_key, video_id, order, max_comments=200):
     youtube = build("youtube", "v3", developerKey=api_key)
     comments = []
     next_page_token = None
@@ -41,7 +52,7 @@ def fetch_comments(api_key, video_id, max_comments=200):
             part="snippet",
             videoId=video_id,
             maxResults=100,
-            order="relevance",
+            order=order,
             pageToken=next_page_token
         )
         response = request.execute()
@@ -51,121 +62,166 @@ def fetch_comments(api_key, video_id, max_comments=200):
             comments.append(text)
 
         next_page_token = response.get("nextPageToken")
-
         if not next_page_token:
             break
 
     return comments[:max_comments]
 
-# ── API key from Streamlit secrets ────────────────────────────────────────────
-try:
-    api_key = st.secrets["YOUTUBE_API_KEY"]
-except Exception:
-    st.error("⚠️ API key not found. Please add YOUTUBE_API_KEY to your Streamlit secrets.")
-    st.stop()
 
-# ── Input ─────────────────────────────────────────────────────────────────────
-url = st.text_input("YouTube Video URL", placeholder="https://www.youtube.com/watch?v=...")
+# ── GEMINI: CLASSIFY COMMENTS ──────────────────────────
+def classify_comments(comments):
+    results = []
 
-analyse_btn = st.button("Analyse Comments", type="primary")
+    batch_size = 20
+    for i in range(0, len(comments), batch_size):
+        batch = comments[i:i+batch_size]
 
-# ── Main logic ────────────────────────────────────────────────────────────────
-if analyse_btn:
-    if not url.strip():
-        st.warning("Please enter a YouTube URL.")
-        st.stop()
+        prompt = f"""
+        Classify each comment. Return JSON list.
+
+        Fields:
+        sentiment: positive / neutral / negative / toxic
+        toxicity_type: none / insult / hate / threat / profanity / spam
+        severity: low / medium / high
+        reason: short explanation
+
+        Comments:
+        {batch}
+        """
+
+        response = model.generate_content(prompt)
+
+        try:
+            parsed = json.loads(response.text)
+            results.extend(parsed)
+        except:
+            # fallback if parsing fails
+            for c in batch:
+                results.append({
+                    "sentiment": "neutral",
+                    "toxicity_type": "none",
+                    "severity": "low",
+                    "reason": "fallback"
+                })
+
+    return results
+
+
+# ── GEMINI: THEMES ─────────────────────────────────────
+def extract_themes(comments):
+    prompt = f"""
+    Group these comments into themes.
+
+    Return JSON like:
+    {{
+      "themes": [
+        {{"name": "Praise", "percentage": 40}},
+        ...
+      ]
+    }}
+
+    Comments:
+    {comments[:100]}
+    """
+
+    response = model.generate_content(prompt)
+
+    try:
+        return json.loads(response.text)["themes"]
+    except:
+        return []
+
+
+# ── INPUT ──────────────────────────────────────────────
+url = st.text_input("YouTube URL")
+
+order = st.selectbox(
+    "Select Comments",
+    ["Top (Relevance)", "Newest"]
+)
+
+order_val = "relevance" if order == "Top (Relevance)" else "time"
+
+if st.button("Analyse", type="primary"):
 
     video_id = extract_video_id(url)
     if not video_id:
-        st.error("Couldn't extract a valid video ID from that URL. Please check the link.")
+        st.error("Invalid URL")
         st.stop()
 
     # Fetch comments
-    with st.spinner("Fetching up to 200 comments from YouTube..."):
-        try:
-            comments = fetch_comments(api_key, video_id)
-        except Exception as e:
-            st.error(f"YouTube API error: {e}")
-            st.stop()
+    with st.spinner("Fetching comments..."):
+        comments = fetch_comments(YOUTUBE_API_KEY, video_id, order_val)
 
     if not comments:
-        st.warning("No comments found for this video.")
+        st.warning("No comments found")
         st.stop()
 
-    # Run Detoxify
-    with st.spinner(f"Analysing {len(comments)} comments for toxicity..."):
-        model = Detoxify('original')
-        results = model.predict(comments)
+    # Classify
+    with st.spinner("Analyzing with AI..."):
+        analysis = classify_comments(comments)
 
-    # Build dataframe
     df = pd.DataFrame(comments, columns=["comment"])
-    df["toxicity"]        = results["toxicity"]
-    df["insult"]          = results["insult"]
-    df["threat"]          = results["threat"]
-    df["obscene"]         = results["obscene"]
-    df["identity_attack"] = results["identity_attack"]
-    df["toxic"]           = df["toxicity"] > 0.5
+    df = pd.concat([df, pd.DataFrame(analysis)], axis=1)
 
-    # ── Results ──────────────────────────────────────────────────────────────
-    st.divider()
-    st.subheader("📊 Results")
+    # Split
+    toxic_df = df[df["sentiment"] == "toxic"]
+    normal_df = df[df["sentiment"] != "toxic"]
 
-    total     = len(df)
-    toxic_cnt = df["toxic"].sum()
-    rate      = round((toxic_cnt / total) * 100, 1)
+    # ── METRICS ────────────────────────────────────────
+    st.subheader("📊 Overview")
 
     col1, col2, col3 = st.columns(3)
-    col1.metric("Comments Analysed", total)
-    col2.metric("Toxic Comments",    toxic_cnt)
-    col3.metric("Toxicity Rate",     f"{rate}%")
 
-    st.divider()
+    col1.metric("Total", len(df))
+    col2.metric("Toxic", len(toxic_df))
+    col3.metric("Normal", len(normal_df))
 
-    # Chart 1 — Toxic vs Normal
-    st.subheader("Toxic vs Normal Comments")
-    fig1, ax1 = plt.subplots(figsize=(5, 3))
-    counts = df["toxic"].value_counts()
-    labels = ["Normal" if not k else "Toxic" for k in counts.index]
-    colors = ["#4CAF50" if l == "Normal" else "#E53935" for l in labels]
-    ax1.bar(labels, counts.values, color=colors)
-    ax1.set_ylabel("Number of Comments")
-    ax1.set_title("Toxic vs Normal Comments")
-    st.pyplot(fig1)
+    # ── SENTIMENT BREAKDOWN ────────────────────────────
+    st.subheader("Sentiment Distribution")
+    sentiment_counts = df["sentiment"].value_counts()
 
-    st.divider()
+    fig, ax = plt.subplots()
+    ax.bar(sentiment_counts.index, sentiment_counts.values)
+    st.pyplot(fig)
 
-    # Chart 2 — Abuse category breakdown
-    st.subheader("Abuse Category Breakdown")
-    abuse_types = ["insult", "threat", "obscene", "identity_attack"]
-    avg_scores  = df[abuse_types].mean()
-    fig2, ax2 = plt.subplots(figsize=(6, 3))
-    bars = ax2.bar(
-        [c.replace("_", " ").title() for c in abuse_types],
-        avg_scores.values,
-        color=["#FF7043", "#AB47BC", "#42A5F5", "#26A69A"]
-    )
-    ax2.set_ylabel("Average Score")
-    ax2.set_title("Average Abuse Scores Across All Comments")
-    ax2.set_ylim(0, max(avg_scores.values) * 1.3 + 0.01)
-    for bar, val in zip(bars, avg_scores.values):
-        ax2.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 0.002,
-                 f"{val:.3f}", ha="center", va="bottom", fontsize=9)
+    # ── THEMES ─────────────────────────────────────────
+    st.subheader("✨ Normal Comment Themes")
+
+    themes = extract_themes(normal_df["comment"].tolist())
+
+    for t in themes:
+        st.write(f"{t['name']} — {t['percentage']}%")
+
+    # ── TOXIC BREAKDOWN ────────────────────────────────
+    st.subheader("🚨 Toxic Categories")
+
+    toxic_counts = toxic_df["toxicity_type"].value_counts()
+
+    fig2, ax2 = plt.subplots()
+    ax2.bar(toxic_counts.index, toxic_counts.values)
     st.pyplot(fig2)
 
-    st.divider()
+    # ── TOP TOXIC COMMENTS ─────────────────────────────
+    st.subheader("🔥 Most Toxic Comments")
 
-    # Top 10 most toxic comments
-    st.subheader("🚨 Most Toxic Comments")
-    st.caption("These are the comments with the highest toxicity score.")
-    top_toxic = (
-        df.sort_values("toxicity", ascending=False)
-        [["comment", "toxicity"]]
-        .head(10)
-        .reset_index(drop=True)
-    )
-    top_toxic.index += 1
-    top_toxic["toxicity"] = top_toxic["toxicity"].apply(lambda x: f"{x:.2%}")
-    st.dataframe(top_toxic, use_container_width=True)
+    top_toxic = toxic_df.head(10)[
+        ["comment", "toxicity_type", "severity", "reason"]
+    ]
 
-    st.divider()
-    st.caption("Built by blmahitha@gmail.com · Powered by YouTube Data API + Detoxify")
+    st.dataframe(top_toxic)
+
+    # ── WORD CLOUD ─────────────────────────────────────
+    st.subheader("☁️ Word Cloud (Normal Comments)")
+
+    text = " ".join(normal_df["comment"].tolist())
+
+    if text.strip():
+        wc = WordCloud(width=800, height=400).generate(text)
+
+        fig3, ax3 = plt.subplots()
+        ax3.imshow(wc)
+        ax3.axis("off")
+        st.pyplot(fig3)
+
+    st.success("Analysis Complete!")
