@@ -14,7 +14,7 @@ st.set_page_config(
 
 # ── Title ─────────────────────────────────────────────────────────────────────
 st.title("🔍 YouTube Comment Toxicity Analyser")
-st.markdown("Paste any YouTube video link to analyse its top 500 comments for toxic language.")
+st.markdown("Paste any YouTube video link to analyse its top 500 comments by relevance for toxic language. Built by **Mahitha Bhagavathi**."")
 st.divider()
 
 # ── Helper: extract video ID from URL ────────────────────────────────────────
