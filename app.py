@@ -78,6 +78,21 @@ def fetch_comments(api_key, video_id, order, max_comments=200):
 
 
 # ── GEMINI: CLASSIFY COMMENTS ──────────────────────────
+parsed = safe_json_parse(response.text)
+
+if parsed:
+    results.extend(parsed)
+else:
+    for c in batch:
+        results.append({
+            "sentiment": "neutral",
+            "toxicity_type": "none",
+            "severity": "low",
+            "reason": "parse_error"
+        })
+
+
+
 def classify_comments(comments):
     results = []
 
