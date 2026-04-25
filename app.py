@@ -14,7 +14,7 @@ st.set_page_config(
 
 # ── Title ─────────────────────────────────────────────────────────────────────
 st.title("🔍 YouTube Comment Toxicity Analyser")
-st.markdown("Paste any YouTube video link to analyse its top 300 comments by relevance for toxic language. Built by **Mahitha Bhagavathi**.")
+st.markdown("Paste any YouTube video link to analyse its top 100 comments by relevance for toxic language. Built by **Mahitha Bhagavathi**.")
 st.divider()
 
 # ── Helper: extract video ID from URL ────────────────────────────────────────
@@ -31,7 +31,7 @@ def extract_video_id(url):
     return None
 
 # ── Helper: fetch comments ────────────────────────────────────────────────────
-def fetch_comments(api_key, video_id, max_comments=300):
+def fetch_comments(api_key, video_id, max_comments=100):
     youtube = build("youtube", "v3", developerKey=api_key)
     comments = []
     next_page_token = None
