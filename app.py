@@ -12,6 +12,45 @@ except Exception:
     st.error("Missing YOUTUBE_API_KEY in Streamlit secrets.")
     st.stop()
 
+import plotly.express as px
+import pandas as pd
+
+# Convert to DataFrame
+df = pd.DataFrame({
+    "Sentiment": sentiment_counts.keys(),
+    "Count": sentiment_counts.values()
+})
+
+# Sort in descending order
+df = df.sort_values(by="Count", ascending=False)
+
+# Color mapping
+color_map = {
+    "Toxic": "red",
+    "Borderline": "orange",
+    "Normal": "green"
+}
+
+fig = px.bar(
+    df,
+    x="Sentiment",
+    y="Count",
+    color="Sentiment",
+    color_discrete_map=color_map,
+    text="Count"
+)
+
+fig.update_traces(textposition="outside")
+
+fig.update_layout(
+    title="Sentiment Breakdown",
+    xaxis_title="",
+    yaxis_title="Number of Comments",
+    showlegend=False
+)
+
+st.plotly_chart(fig, use_container_width=True)
+
 TOXICITY_EXPLANATIONS = {
     "toxicity":            ("☠️ Toxicity",           "General harmful or rude content"),
     "severe_toxicity":     ("💀 Severe Toxicity",     "Extremely hateful or violent language"),
