@@ -1,6 +1,6 @@
-streamlit
-pandas
-matplotlib
-google-api-python-client
+streamlit==1.36.0
+pandas==2.2.2
+matplotlib==3.8.4
+google-api-python-client==2.126.0
 google-generativeai
-wordcloud
+wordcloud==1.9.3
