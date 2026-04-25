@@ -1,5 +1,6 @@
 streamlit
 pandas
+matplotlib
 google-api-python-client
 detoxify
 torch
