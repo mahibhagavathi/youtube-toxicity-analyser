@@ -5,8 +5,7 @@ A Streamlit-based AI web app that analyzes YouTube video comments and detects to
 ---
 
 ## 🚀 Live Demo
-*(Add your Streamlit Cloud / deployed link here)*  
-Example: https://your-app-link.streamlit.app
+*((https://youtube-toxicity-analyser.streamlit.app/))*  
 
 ---
 
@@ -49,13 +48,3 @@ Example: https://your-app-link.streamlit.app
 - **APIs:** YouTube Data API v3  
 - **Data Processing:** Pandas, Regex  
 - **Visualization:** Matplotlib  
-
----
-
-## 📦 Installation
-
-```bash
-git clone https://github.com/your-username/youtube-comment-analyser.git
-cd youtube-comment-analyser
-
-pip install -r requirements.txt
