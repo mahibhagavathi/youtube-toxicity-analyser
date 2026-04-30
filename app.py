@@ -1,5 +1,3 @@
-python
-
 import streamlit as st
 import pandas as pd
 import re
@@ -263,6 +261,7 @@ details {
 .stCaption { color: #b08f8f !important; }
 </style>
 """, unsafe_allow_html=True)
+
 
 # ── SECRETS ──────────────────────────────────────────────────────────────────
 try:
